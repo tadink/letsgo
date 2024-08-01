@@ -98,13 +98,15 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	if w.Result != 200 {
 		return errors.New("errcode:" + strconv.Itoa(w.ErrCode) + " msg:" + w.Msg)
 	}
-	d.recordIds.Store(token, w.Data.Id)
+	key := fmt.Sprintf("%x", md5.Sum([]byte(domain+token+keyAuth)))
+	d.recordIds.Store(key, w.Data.Id)
 	return nil
 }
 func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	//username := "tuiguang9bu433@163.com"
 	//apiPassword := "tuiguang9bu"
-	recordId, ok := d.recordIds.Load(token)
+	key := fmt.Sprintf("%x", md5.Sum([]byte(domain+token+keyAuth)))
+	recordId, ok := d.recordIds.LoadAndDelete(key)
 	if !ok {
 		return fmt.Errorf("recordId 不存在 %s", domain)
 	}

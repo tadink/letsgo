@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"letsgo/common"
+	"os"
+	"path/filepath"
+
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/log"
 	"github.com/go-acme/lego/v4/registration"
-	"os"
-	"path/filepath"
-	"tgbot/common"
 )
 
 const (

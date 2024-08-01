@@ -1,9 +1,10 @@
-package lego
+package client
 
 import (
+	"letsgo/accounts"
+	"letsgo/providers"
+
 	"github.com/go-acme/lego/v4/lego"
-	"tgbot/accounts"
-	"tgbot/providers"
 )
 
 func NewLegoClient(accountEmail, westUsername, westPassword string) (*lego.Client, error) {
