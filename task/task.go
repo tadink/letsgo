@@ -12,6 +12,7 @@ import (
 	"letsgo/common"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -36,6 +37,7 @@ type Config struct {
 	ParallelCount  int    `json:"parallel_count"`
 	BtDbPath       string `json:"bt_db_path"`
 	BtVhostDir     string `json:"bt_vhost_dir"`
+	NginxConfTpl   string
 }
 
 func Init() error {
@@ -86,6 +88,11 @@ func Run() {
 	close(parallelChan)
 	close(domainQueue)
 	<-finishChan
+	c := exec.Command("/etc/init.d/nginx", "reload")
+	err = c.Run()
+	if err != nil {
+		slog.Error("重启nginx失败:" + err.Error())
+	}
 }
 
 func handleBtDb() {
@@ -94,15 +101,14 @@ func handleBtDb() {
 		if err == nil {
 			continue
 		}
-		s := &bt.Site{Name: domain, Path: "/www/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
+		s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
 		err = bt.SaveSite(s)
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error("save site error:" + err.Error())
 			continue
 		}
-
 	}
-	finishChan <- struct{}{}
+	close(finishChan)
 }
 
 func getDomains() ([]string, error) {
@@ -125,6 +131,11 @@ func parseConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	nd, err := os.ReadFile("nginx_conf.tpl")
+	if err != nil {
+		return nil, err
+	}
+	config.NginxConfTpl = string(nd)
 	return &config, nil
 }
 
@@ -163,7 +174,7 @@ func applyRequest(domain string) {
 	}
 	keyFile, err := filepath.Abs(certsStore.GetFileName(domain, ".key"))
 	if err != nil {
-		slog.Error("get key file name error:", err.Error())
+		slog.Error("get key file name error:" + err.Error())
 		return
 
 	}
@@ -177,31 +188,8 @@ func applyRequest(domain string) {
 }
 
 func generateNginxConf(domain string, crtFile string, keyFile string) error {
-	tpl := `server{
-    listen 80;
-	listen 443 ssl http2;
-    server_name %s *.%s;
-   
-	ssl_certificate    %s;
-    ssl_certificate_key   %s;
-    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
-    ssl_ciphers EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    location / {
-        proxy_pass http://127.0.0.1:8899;
-        proxy_set_header Accept-Encoding "";
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For  $proxy_add_x_forwarded_for;
-        proxy_set_header Host $host;
-        proxy_cache off;
-        proxy_set_header scheme $scheme;
- }
-}`
-
-	nginxConf := fmt.Sprintf(tpl, domain, domain, crtFile, keyFile)
+	rp := strings.NewReplacer("{domain}", domain, "{crt}", crtFile, "{key}", keyFile)
+	nginxConf := rp.Replace(Conf.NginxConfTpl)
 	nginxConfName := fmt.Sprintf("%s.conf", domain)
 	if err := common.CreateNonExistingFolder(Conf.BtVhostDir); err != nil {
 		return err

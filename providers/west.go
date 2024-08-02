@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -57,7 +58,7 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(authZone, subDomain)
+	slog.Info("auth_zone subdomain", authZone, subDomain)
 	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 	westToken := fmt.Sprintf("%x", md5.Sum([]byte(d.Username+d.ApiPassword+timestamp)))
 	form := url.Values{}
