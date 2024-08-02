@@ -1,5 +1,8 @@
 {
   "ca_account_email": "myemail@email.com",
-  "west_username": "",
-  "west_password": ""
+  "west_username": "tuiguang9bu433@163.com",
+  "west_password": "tuiguang9bu",
+  "parallel_count":20,
+  "bt_db_path": "/www/server/panel/data/default.db",
+  "bt_vhost_dir": "/www/wwwroot/server/panel/vhost/nginx/"
 }

@@ -48,7 +48,6 @@ func (d *WestDNSProvider) Timeout() (timeout, interval time.Duration) {
 
 func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	info := dns01.GetChallengeInfo(domain, keyAuth)
-	fmt.Printf("%+v", info)
 	authZone, err := dns01.FindZoneByFqdn(info.EffectiveFQDN)
 	if err != nil {
 		return fmt.Errorf("west: could not find zone for domain %q: %w", domain, err)
@@ -61,7 +60,6 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	fmt.Println(authZone, subDomain)
 	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 	westToken := fmt.Sprintf("%x", md5.Sum([]byte(d.Username+d.ApiPassword+timestamp)))
-	fmt.Println(domain)
 	form := url.Values{}
 	form.Add("domain", domain)
 	form.Add("host", subDomain)
