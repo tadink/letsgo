@@ -43,15 +43,8 @@ func main() {
 
 }
 func handleStartCmd() {
-	f, err := os.Open("stdout.log")
-	if err != nil {
-		fmt.Println("start error:", err.Error())
-		return
-	}
 	cmd := exec.Command(os.Args[0])
-	cmd.Stdout = f
-	cmd.Stderr = f
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		fmt.Println("start error:", err.Error())
 		return
