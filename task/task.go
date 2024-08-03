@@ -5,15 +5,19 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"letsgo/bt"
 	"letsgo/certs"
 	"letsgo/client"
 	"letsgo/common"
+	"letsgo/config"
+	"letsgo/providers"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -28,17 +32,7 @@ var finishChan chan struct{}
 var c *lego.Client
 var wg *sync.WaitGroup = new(sync.WaitGroup)
 var domainQueue chan string
-var Conf *Config
-
-type Config struct {
-	CaAccountEmail string `json:"ca_account_email"`
-	WestUsername   string `json:"west_username"`
-	WestPassword   string `json:"west_password"`
-	ParallelCount  int    `json:"parallel_count"`
-	BtDbPath       string `json:"bt_db_path"`
-	BtVhostDir     string `json:"bt_vhost_dir"`
-	NginxConfTpl   string
-}
+var Conf *config.Config
 
 func Init() error {
 	var err error
@@ -46,11 +40,16 @@ func Init() error {
 	if err != nil {
 		return err
 	}
+	err = checkConfig(Conf)
+	if err != nil {
+		return err
+	}
 	err = bt.InitDb(Conf.BtDbPath)
 	if err != nil {
 		return err
 	}
-	c, err = client.NewLegoClient(Conf.CaAccountEmail, Conf.WestUsername, Conf.WestPassword)
+	p := providers.NewWestDNSProvider(Conf.WestUsername, Conf.WestPassword)
+	c, err = client.NewLegoClient(Conf.CA, p)
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,11 @@ func Run() {
 	close(parallelChan)
 	close(domainQueue)
 	<-finishChan
-	c := exec.Command("/etc/init.d/nginx", "reload")
+	n := strings.SplitN(Conf.NginxRestartCmd, " ", 2)
+	if len(n) < 2 {
+		return
+	}
+	c := exec.Command(n[0], n[1])
 	err = c.Run()
 	if err != nil {
 		slog.Error("重启nginx失败:" + err.Error())
@@ -121,12 +124,12 @@ func getDomains() ([]string, error) {
 	return domains, nil
 
 }
-func parseConfig() (*Config, error) {
+func parseConfig() (*config.Config, error) {
 	data, err := os.ReadFile("config.json")
 	if err != nil {
 		return nil, err
 	}
-	var config Config
+	var config config.Config
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
@@ -216,5 +219,30 @@ func parseCertificate(domain string) error {
 		return fmt.Errorf("证书过期时间小于72小时 %s,%s", domain, certificates[0].NotAfter.Format("2006-01-02 15:04:05"))
 	}
 
+	return nil
+}
+
+func checkConfig(config *config.Config) error {
+	if config.CA.AccountEmail == "" {
+		return errors.New("ca邮箱不能为空")
+	}
+	pattern := `\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*`
+	reg := regexp.MustCompile(pattern)
+	if !reg.MatchString(config.CA.AccountEmail) {
+		return errors.New("ca邮箱格式不正确")
+
+	}
+	if config.CA.Name == "" {
+		return errors.New("ca名称不能为空")
+	}
+	if config.CA.Name != "letsencrypt" && config.CA.Name != "zerossl" {
+		return errors.New("ca名称只能是letsencrypt或者zerossl")
+	}
+	if config.CA.Name == "letsencrypt" && !strings.Contains(config.CA.Url, "letsencrypt") {
+		return errors.New("ca名称和ca url不匹配")
+	}
+	if config.CA.Name == "zerossl" && !strings.Contains(config.CA.Url, "zerossl") {
+		return errors.New("ca名称和ca url不匹配")
+	}
 	return nil
 }

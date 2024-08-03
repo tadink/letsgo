@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"letsgo/common"
+	"letsgo/config"
 	"os"
 	"path/filepath"
 
@@ -64,10 +65,10 @@ type AccountsStorage struct {
 }
 
 // NewAccountsStorage Creates a new AccountsStorage.
-func NewAccountsStorage(email string) *AccountsStorage {
+func NewAccountsStorage(email string, caName string) *AccountsStorage {
 
 	rootPath := filepath.Join("./", baseAccountsRootFolderName)
-	serverPath := "letsencrypt"
+	serverPath := caName
 	accountsPath := filepath.Join(rootPath, serverPath)
 	rootUserPath := filepath.Join(accountsPath, email)
 
@@ -111,7 +112,7 @@ func (s *AccountsStorage) Save(account *Account) error {
 	return os.WriteFile(s.accountFilePath, jsonBytes, os.ModePerm)
 }
 
-func (s *AccountsStorage) LoadAccount() *Account {
+func (s *AccountsStorage) LoadAccount(ca config.CAInfo) *Account {
 	var account Account
 	fileBytes, err := os.ReadFile(s.accountFilePath)
 	if err == nil {
@@ -125,7 +126,7 @@ func (s *AccountsStorage) LoadAccount() *Account {
 
 	account.Email = s.userID
 	account.key = s.GetPrivateKey(certcrypto.EC256)
-	reg, err := tryRecoverRegistration(account.key)
+	reg, err := tryRecoverRegistration(account.key, ca)
 	if err != nil {
 		log.Fatalf("Could not load accounts for %s. Registration is nil: %#v", s.userID, err)
 	}
@@ -208,17 +209,36 @@ func loadPrivateKey(file string) (crypto.PrivateKey, error) {
 	return nil, errors.New("unknown private key type")
 }
 
-func tryRecoverRegistration(privateKey crypto.PrivateKey) (*registration.Resource, error) {
+func tryRecoverRegistration(privateKey crypto.PrivateKey, ca config.CAInfo) (*registration.Resource, error) {
 	// couldn't load accounts but got a key. Try to look the accounts up.
 	config := lego.NewConfig(&Account{key: privateKey})
+	config.CADirURL = ca.Url
 	client, err := lego.NewClient(config)
+
 	if err != nil {
 		return nil, err
 	}
 
 	reg, err := client.Registration.ResolveAccountByKey()
 	if err != nil {
-		reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if ca.Name == "zerossl" {
+			return registZeroSSL(client, ca.EABKid, ca.EABHmacKey)
+		}
+		return registLetsEncrypt(client)
+
 	}
 	return reg, nil
+}
+
+func registZeroSSL(client *lego.Client, eabKid string, eabHmacKey string) (*registration.Resource, error) {
+	return client.Registration.RegisterWithExternalAccountBinding(registration.RegisterEABOptions{
+		TermsOfServiceAgreed: true,
+		Kid:                  eabKid,
+		HmacEncoded:          eabHmacKey,
+	})
+}
+func registLetsEncrypt(client *lego.Client) (*registration.Resource, error) {
+	return client.Registration.Register(registration.RegisterOptions{
+		TermsOfServiceAgreed: true,
+	})
 }

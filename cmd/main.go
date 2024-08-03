@@ -37,6 +37,8 @@ func main() {
 	  tuiguang9bu433@163.com
 	  tuiguang9bu
 	  cdstk.com
+	  https://acme.zerossl.com/v2/DV90
+	  https://acme-v02.api.letsencrypt.org/directory
 	*/
 
 }

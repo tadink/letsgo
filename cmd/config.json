@@ -1,8 +1,15 @@
 {
-  "ca_account_email": "myemail@email.com",
+  "ca": {
+    "account_email": "myemail@email.com",
+    "name": "zerossl",
+    "url": "https://acme.zerossl.com/v2/DV90",
+    "eab_kid": "44xPB57Ljljxw7w4pfXZkQ",
+    "eab_hmac_key": "5L0yk8iWuGidnmBRc8CCSUANRSc_7qv3POEk2fNXX_2ZwX49Mr2phgJCXhZWe9jcNyTxOgsuypRRMW0PPl9EvQ"
+  },
   "west_username": "tuiguang9bu433@163.com",
   "west_password": "tuiguang9bu",
-  "parallel_count":20,
+  "parallel_count": 20,
   "bt_db_path": "/www/server/panel/data/default.db",
-  "bt_vhost_dir": "/www/wwwroot/server/panel/vhost/nginx/"
+  "bt_vhost_dir": "/www/wwwroot/server/panel/vhost/nginx/",
+  "nginx_restart_cmd":"/etc/init.d/nginx restart"
 }
