@@ -44,7 +44,7 @@ type DNSData struct {
 	Id      int    `json:"id"`
 	Item    string `json:"item"`
 	Value   string `json:"value"`
-	DNSType string `json:type`
+	DNSType string `json:"type"`
 }
 
 func NewWestDNSProvider(Username string, ApiPassword string) *WestDNSProvider {
@@ -76,7 +76,7 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	form.Add("value", info.Value)
 	form.Add("ttl", "60")
 	form.Add("level", "10")
-	w, err := d.addRecord(AddURL, form)
+	w, err := d.addRecord(form)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	form := &url.Values{}
 	form.Add("domain", domain)
 	form.Add("id", id)
-	_, err := d.deleteRecord(DeleteURL, form)
+	_, err := d.deleteRecord(form)
 
 	if err != nil {
 		return err
@@ -114,8 +114,8 @@ func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	return nil
 }
 
-func (d *WestDNSProvider) addRecord(u string, form *url.Values) (*WestResponse, error) {
-	data, err := d.getResponse(u, form)
+func (d *WestDNSProvider) addRecord(form *url.Values) (*WestResponse, error) {
+	data, err := d.getResponse(AddURL, form)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +127,8 @@ func (d *WestDNSProvider) addRecord(u string, form *url.Values) (*WestResponse, 
 	return &w, nil
 
 }
-func (d *WestDNSProvider) deleteRecord(u string, form *url.Values) (*WestResponse, error) {
-	data, err := d.getResponse(u, form)
+func (d *WestDNSProvider) deleteRecord(form *url.Values) (*WestResponse, error) {
+	data, err := d.getResponse(DeleteURL, form)
 	if err != nil {
 		return nil, err
 	}

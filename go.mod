@@ -28,6 +28,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.11.0
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/miekg/dns v1.1.59 // indirect
+	github.com/wenzhenxi/gorsa v0.0.0-20230530123828-0320cce15d81
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0

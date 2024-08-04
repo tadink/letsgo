@@ -24,6 +24,12 @@ import (
 )
 
 func main() {
+	// common.Encrypt()
+	// return
+	if err := common.Auth(); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	if len(os.Args) < 2 {
 		serverStart()
 		return

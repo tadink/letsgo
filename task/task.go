@@ -41,7 +41,10 @@ type Counter struct {
 }
 
 func Init() error {
-	var err error
+	err := common.Auth()
+	if err != nil {
+		return err
+	}
 	Conf, err = config.ParseConfig()
 	if err != nil {
 		return err
