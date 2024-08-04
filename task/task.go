@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
@@ -32,6 +33,12 @@ var c *lego.Client
 var wg *sync.WaitGroup = new(sync.WaitGroup)
 var domainQueue chan string
 var Conf *config.Config
+var counter *Counter
+
+type Counter struct {
+	failObtain atomic.Int32
+	failSave   atomic.Int32
+}
 
 func Init() error {
 	var err error
@@ -55,10 +62,10 @@ func Init() error {
 	parallelChan = make(chan struct{}, Conf.ParallelCount)
 	finishChan = make(chan struct{})
 	domainQueue = make(chan string, 50)
+	counter = new(Counter)
 	return nil
 }
 func Run() {
-	fmt.Println("start run")
 	err := Init()
 	if err != nil {
 		slog.Error("task init error:" + err.Error())
@@ -70,22 +77,27 @@ func Run() {
 		return
 	}
 	go handleBtDb()
-
+	var dealCount = 0
 	for _, domain := range domains {
 
 		err = parseCertificate(domain)
 		if err == nil {
 			continue
 		}
+		dealCount++
+		if dealCount > 300 {
+			break
+		}
+		time.Sleep(5 * time.Second)
 		wg.Add(1)
 		parallelChan <- struct{}{}
 		go applyRequest(domain)
-
 	}
 	wg.Wait()
 	close(parallelChan)
 	close(domainQueue)
 	<-finishChan
+	slog.Info(fmt.Sprintf("运行完成:申请证书失败总共 %d 个，证书保存失败总共：%d个", counter.failObtain.Load(), counter.failSave.Load()))
 	n := strings.SplitN(Conf.NginxRestartCmd, " ", 2)
 	if len(n) < 2 {
 		return
@@ -103,7 +115,13 @@ func handleBtDb() {
 		if err == nil {
 			continue
 		}
-		s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
+		s := &bt.Site{
+			Name:    domain,
+			Path:    "/www/wwwroot/",
+			Status:  "1",
+			Ps:      domain,
+			AddTime: time.Now().Format("2006-01-02 15:04:05"),
+		}
 		err = bt.SaveSite(s)
 		if err != nil {
 			slog.Error("save site error:" + err.Error())
@@ -144,11 +162,13 @@ func applyRequest(domain string) {
 	}
 	certificates, err := c.Certificate.Obtain(request)
 	if err != nil {
+		counter.failObtain.Add(1)
 		slog.Error("obtain error:" + err.Error())
 		return
 	}
 	err = certsStore.SaveResource(certificates)
 	if err != nil {
+		counter.failSave.Add(1)
 		slog.Error("saveResource error:" + err.Error())
 		return
 	}
@@ -210,6 +230,9 @@ func checkConfig(config *config.Config) error {
 	}
 	if config.CA.Name == "zerossl" && !strings.Contains(config.CA.Url, "zerossl") {
 		return errors.New("ca名称和ca url不匹配")
+	}
+	if config.CA.Name == "zerossl" && (config.CA.EABKid == "" || config.CA.EABHmacKey == "") {
+		return errors.New("eab_kid和eab_hmac_key不能为空")
 	}
 	return nil
 }

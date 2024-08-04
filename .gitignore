@@ -1,0 +1,6 @@
+.idea/
+cmd/accounts
+cmd/archives
+cmd/certificates
+cmd/logs
+cmd/domains

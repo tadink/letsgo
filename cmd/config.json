@@ -10,6 +10,6 @@
   "west_password": "tuiguang9bu",
   "parallel_count": 20,
   "bt_db_path": "/www/server/panel/data/default.db",
-  "bt_vhost_dir": "/www/wwwroot/server/panel/vhost/nginx/",
+  "bt_vhost_dir": "/www/server/panel/vhost/nginx/",
   "nginx_restart_cmd":"/etc/init.d/nginx restart"
 }
