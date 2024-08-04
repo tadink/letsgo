@@ -61,12 +61,12 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	slog.Info("auth_zone subdomain", authZone, subDomain)
 	form := &url.Values{}
 	form.Add("domain", domain)
-	form.Add("host", "_acme-challenge")
+	form.Add("host", subDomain)
 	form.Add("type", "TXT")
 	form.Add("value", info.Value)
 	form.Add("ttl", "60")
 	form.Add("level", "10")
-	w, err := d.doRequest(form)
+	w, err := d.doRequest(AddURL, form)
 	if err != nil {
 		return err
 	}
@@ -84,21 +84,21 @@ func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	form := &url.Values{}
 	form.Add("domain", domain)
 	form.Add("id", id)
-	_, err := d.doRequest(form)
+	_, err := d.doRequest(DeleteURL, form)
 
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (d *WestDNSProvider) doRequest(form *url.Values) (*WestResponse, error) {
+func (d *WestDNSProvider) doRequest(u string, form *url.Values) (*WestResponse, error) {
 	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 	westToken := fmt.Sprintf("%x", md5.Sum([]byte(d.Username+d.ApiPassword+timestamp)))
 	form.Add("token", westToken)
 	form.Add("username", d.Username)
 	form.Add("time", timestamp)
 
-	request, err := http.NewRequest("POST", DeleteURL, strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", u, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}

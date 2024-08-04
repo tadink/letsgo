@@ -91,7 +91,7 @@ func addSite(tx *sql.Tx, site *Site) error {
 func addDomain(tx *sql.Tx, name string, pid int) error {
 	d := &Domain{Name: name, Pid: pid, Port: 443, AddTime: time.Now().Format("2006-01-02 15:04:05")}
 	d2 := &Domain{Name: "*." + name, Pid: pid, Port: 443, AddTime: time.Now().Format("2006-01-02 15:04:05")}
-	stmt, err := tx.Prepare("insert into domain(`pid`,`name`,`port`,`addtime`)values(?,?,?,?)(?,?,?,?)")
+	stmt, err := tx.Prepare("insert into domain(`pid`,`name`,`port`,`addtime`)values(?,?,?,?),(?,?,?,?)")
 	if err != nil {
 		return err
 	}

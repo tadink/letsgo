@@ -3,7 +3,6 @@ package task
 import (
 	"crypto"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -36,7 +35,7 @@ var Conf *config.Config
 
 func Init() error {
 	var err error
-	Conf, err = parseConfig()
+	Conf, err = config.ParseConfig()
 	if err != nil {
 		return err
 	}
@@ -124,23 +123,6 @@ func getDomains() ([]string, error) {
 	return domains, nil
 
 }
-func parseConfig() (*config.Config, error) {
-	data, err := os.ReadFile("config.json")
-	if err != nil {
-		return nil, err
-	}
-	var config config.Config
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return nil, err
-	}
-	nd, err := os.ReadFile("nginx_conf.tpl")
-	if err != nil {
-		return nil, err
-	}
-	config.NginxConfTpl = string(nd)
-	return &config, nil
-}
 
 func applyRequest(domain string) {
 	defer func() {
@@ -181,7 +163,7 @@ func applyRequest(domain string) {
 		return
 
 	}
-	err = generateNginxConf(domain, crtFile, keyFile)
+	err = common.GenerateNginxConf(Conf.NginxConfTpl, Conf.BtVhostDir, domain, crtFile, keyFile)
 	if err != nil {
 		slog.Error("generateNginxConf:" + err.Error())
 		return
@@ -190,21 +172,6 @@ func applyRequest(domain string) {
 
 }
 
-func generateNginxConf(domain string, crtFile string, keyFile string) error {
-	rp := strings.NewReplacer("{domain}", domain, "{crt}", crtFile, "{key}", keyFile)
-	nginxConf := rp.Replace(Conf.NginxConfTpl)
-	nginxConfName := fmt.Sprintf("%s.conf", domain)
-	if err := common.CreateNonExistingFolder(Conf.BtVhostDir); err != nil {
-		return err
-	}
-	err := os.WriteFile(filepath.Join(Conf.BtVhostDir, nginxConfName), []byte(nginxConf), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	return nil
-
-}
 func parseCertificate(domain string) error {
 	certificates, err := certsStore.ReadCertificate(domain, ".crt")
 	if err != nil {
