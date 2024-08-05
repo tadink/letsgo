@@ -106,10 +106,12 @@ func Run() {
 		return
 	}
 	c := exec.Command(n[0], n[1])
-	err = c.Run()
+	out, err := c.Output()
 	if err != nil {
 		slog.Error("重启nginx失败:" + err.Error())
+		return
 	}
+	slog.Info("重启nginx命令输出：" + string(out))
 }
 
 func handleBtDb() {
