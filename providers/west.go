@@ -3,6 +3,7 @@ package providers
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -25,22 +26,18 @@ type WestDNSProvider struct {
 	ApiPassword string
 	recordIds   sync.Map
 }
-type WestResponse struct {
-	Result   int     `json:"result"`
-	Clientid string  `json:"clientid"`
-	Data     DNSData `json:"data"`
-	Msg      string  `json:"msg"`
-	ErrCode  int     `json:"errcode"`
+type WestResponse[T DNSRecord | RecordList] struct {
+	Result   int    `json:"result"`
+	Clientid string `json:"clientid"`
+	Data     T      `json:"data"`
+	Msg      string `json:"msg"`
+	ErrCode  int    `json:"errcode"`
 }
 
-type GetDNSResponse struct {
-	Result   int       `json:"result"`
-	Clientid string    `json:"clientid"`
-	Data     []DNSData `json:"data"`
-	Msg      string    `json:"msg"`
-	ErrCode  int       `json:"errcode"`
+type RecordList struct {
+	Items []DNSRecord
 }
-type DNSData struct {
+type DNSRecord struct {
 	Id      int    `json:"id"`
 	Item    string `json:"item"`
 	Value   string `json:"value"`
@@ -82,7 +79,7 @@ func (d *WestDNSProvider) Present(domain, token, keyAuth string) error {
 	}
 	key := fmt.Sprintf("%x", md5.Sum([]byte(domain+token+keyAuth)))
 	if w.Result != 200 && w.ErrCode == 20118 {
-		id, err := d.getRecords(domain, subDomain, info.Value)
+		id, err := d.GetRecordId(domain, subDomain, info.Value)
 		if err != nil {
 			return err
 		}
@@ -107,19 +104,18 @@ func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	form.Add("domain", domain)
 	form.Add("id", id)
 	_, err := d.deleteRecord(form)
-
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *WestDNSProvider) addRecord(form *url.Values) (*WestResponse, error) {
+func (d *WestDNSProvider) addRecord(form *url.Values) (*WestResponse[DNSRecord], error) {
 	data, err := d.getResponse(AddURL, form)
 	if err != nil {
 		return nil, err
 	}
-	var w WestResponse
+	var w WestResponse[DNSRecord]
 	err = json.Unmarshal(data, &w)
 	if err != nil {
 		return nil, err
@@ -127,12 +123,12 @@ func (d *WestDNSProvider) addRecord(form *url.Values) (*WestResponse, error) {
 	return &w, nil
 
 }
-func (d *WestDNSProvider) deleteRecord(form *url.Values) (*WestResponse, error) {
+func (d *WestDNSProvider) deleteRecord(form *url.Values) (*WestResponse[DNSRecord], error) {
 	data, err := d.getResponse(DeleteURL, form)
 	if err != nil {
 		return nil, err
 	}
-	var w WestResponse
+	var w WestResponse[DNSRecord]
 	err = json.Unmarshal(data, &w)
 	if err != nil {
 		return nil, err
@@ -140,31 +136,39 @@ func (d *WestDNSProvider) deleteRecord(form *url.Values) (*WestResponse, error) 
 	return &w, nil
 
 }
-func (d *WestDNSProvider) getRecords(domain, subDomain, value string) (int, error) {
-	form := new(url.Values)
-	form.Add("domain", domain)
-	form.Add("limit", "100")
-	data, err := d.getResponse(GetURL, form)
+
+func (d *WestDNSProvider) GetRecordId(domain, subDomain, value string) (int, error) {
+	records, err := d.GetRecords(domain)
 	if err != nil {
 		return 0, err
 	}
-	var r GetDNSResponse
-	err = json.Unmarshal(data, &r)
-	if err != nil {
-		return 0, err
-	}
-	if r.Result != 200 {
-		return 0, fmt.Errorf("getRecords error:%d %s", r.ErrCode, r.Msg)
-	}
-	if len(r.Data) < 1 {
-		return 0, fmt.Errorf("getRecords error:解析记录为空")
-	}
-	for _, record := range r.Data {
+	for _, record := range records {
 		if record.DNSType == "TXT" && record.Value == value && record.Item == subDomain {
 			return record.Id, nil
 		}
 	}
-	return 0, nil
+	return 0, errors.New("id 未获取到")
+}
+func (d *WestDNSProvider) GetRecords(domain string) ([]DNSRecord, error) {
+	form := &url.Values{}
+	form.Add("domain", domain)
+	form.Add("limit", "100")
+	data, err := d.getResponse(GetURL, form)
+	if err != nil {
+		return nil, err
+	}
+	var r WestResponse[RecordList]
+	err = json.Unmarshal(data, &r)
+	if err != nil {
+		return nil, err
+	}
+	if r.Result != 200 {
+		return nil, fmt.Errorf("getRecords error:%d %s", r.ErrCode, r.Msg)
+	}
+	if len(r.Data.Items) < 1 {
+		return nil, fmt.Errorf("getRecords error:解析记录为空")
+	}
+	return r.Data.Items, nil
 
 }
 
@@ -174,7 +178,6 @@ func (d *WestDNSProvider) getResponse(u string, form *url.Values) ([]byte, error
 	form.Add("token", westToken)
 	form.Add("username", d.Username)
 	form.Add("time", timestamp)
-
 	request, err := http.NewRequest("POST", u, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err

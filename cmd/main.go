@@ -8,6 +8,7 @@ import (
 	"letsgo/common"
 	"letsgo/config"
 	"letsgo/log"
+	"letsgo/providers"
 	"letsgo/task"
 	"log/slog"
 	"os"
@@ -26,10 +27,10 @@ import (
 func main() {
 	// common.Encrypt()
 	// return
-	if err := common.Auth(); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	// if err := common.Auth(); err != nil {
+	// 	fmt.Println(err.Error())
+	// 	return
+	// }
 	if len(os.Args) < 2 {
 		serverStart()
 		return
@@ -120,8 +121,8 @@ func serverStart() {
 		gocron.NewTask(task.Run),
 		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 		gocron.WithStartAt(gocron.WithStartImmediately()),
+		gocron.WithEventListeners(gocron.AfterJobRunsWithPanic(task.AfterJobRunsWithPanic)),
 	)
-
 	if err != nil {
 		slog.Error(err.Error())
 		return
@@ -187,5 +188,29 @@ func handleFix() {
 			return
 		}
 
+	}
+}
+
+func cleanDnsRecord() {
+	conf, err := config.ParseConfig()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	domains, err := common.GetDomains()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	p := providers.NewWestDNSProvider(conf.WestUsername, conf.WestPassword)
+	for _, domain := range domains {
+		records, err := p.GetRecords(domain)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		for _, record := range records {
+
+		}
 	}
 }

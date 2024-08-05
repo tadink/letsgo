@@ -160,3 +160,14 @@ N36ruuotrTuuJNRxP2VW+XH8A9JdOPf0jmcrZlFcak528lwiIRWnfUjPLc7bjnry
 	}
 
 }
+
+func GetDomains() ([]string, error) {
+	d, err := os.ReadFile("domains")
+	if err != nil {
+		return nil, err
+	}
+	domainStr := strings.ReplaceAll(string(d), "\r", "")
+	domains := strings.Split(domainStr, "\n")
+	return domains, nil
+
+}

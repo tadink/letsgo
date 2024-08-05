@@ -13,14 +13,16 @@ import (
 	"letsgo/config"
 	"letsgo/providers"
 	"log/slog"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/lego"
@@ -74,7 +76,7 @@ func Run() {
 		slog.Error("task init error:" + err.Error())
 		return
 	}
-	domains, err := getDomains()
+	domains, err := common.GetDomains()
 	if err != nil {
 		slog.Error("get domains error:" + err.Error())
 		return
@@ -132,17 +134,6 @@ func handleBtDb() {
 		}
 	}
 	close(finishChan)
-}
-
-func getDomains() ([]string, error) {
-	d, err := os.ReadFile("domains")
-	if err != nil {
-		return nil, err
-	}
-	domainStr := strings.ReplaceAll(string(d), "\r", "")
-	domains := strings.Split(domainStr, "\n")
-	return domains, nil
-
 }
 
 func applyRequest(domain string) {
@@ -238,4 +229,15 @@ func checkConfig(config *config.Config) error {
 		return errors.New("eab_kid和eab_hmac_key不能为空")
 	}
 	return nil
+}
+func AfterJobRunsWithPanic(jobID uuid.UUID, jobName string, recoverData any) {
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(1, pc)
+	msg := ""
+	for i := 0; i < n; i++ {
+		f := runtime.FuncForPC(pc[i])
+		file, line := f.FileLine(pc[i])
+		msg += fmt.Sprintf("%s %d %s\n", file, line, f.Name())
+	}
+	slog.Error("task error", "job_name", jobName, "recover_data", recoverData, "msg", msg)
 }
