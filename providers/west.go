@@ -103,7 +103,7 @@ func (d *WestDNSProvider) CleanUp(domain, token, keyAuth string) error {
 	form := &url.Values{}
 	form.Add("domain", domain)
 	form.Add("id", id)
-	_, err := d.deleteRecord(form)
+	_, err := d.DeleteRecord(form)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (d *WestDNSProvider) addRecord(form *url.Values) (*WestResponse[DNSRecord],
 	return &w, nil
 
 }
-func (d *WestDNSProvider) deleteRecord(form *url.Values) (*WestResponse[DNSRecord], error) {
+func (d *WestDNSProvider) DeleteRecord(form *url.Values) (*WestResponse[DNSRecord], error) {
 	data, err := d.getResponse(DeleteURL, form)
 	if err != nil {
 		return nil, err

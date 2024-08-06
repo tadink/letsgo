@@ -11,6 +11,7 @@ import (
 	"letsgo/providers"
 	"letsgo/task"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -45,6 +46,8 @@ func main() {
 		handleStartCmd()
 	case "fix_bt":
 		handleFix()
+	case "clean_dns":
+		cleanDnsRecord()
 	default:
 		fmt.Println("unknown command")
 	}
@@ -206,10 +209,20 @@ func cleanDnsRecord() {
 	for _, domain := range domains {
 		records, err := p.GetRecords(domain)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println(domain, err.Error())
 			continue
 		}
 		for _, record := range records {
+			if record.DNSType == "TXT" && record.Item == "_acme-challenge" {
+				id := fmt.Sprintf("%d", record.Id)
+				form := &url.Values{}
+				form.Add("domain", domain)
+				form.Add("id", id)
+				_, err = p.DeleteRecord(form)
+				if err != nil {
+					fmt.Println(domain, err.Error())
+				}
+			}
 
 		}
 	}

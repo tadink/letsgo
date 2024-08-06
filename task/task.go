@@ -43,10 +43,11 @@ type Counter struct {
 }
 
 func Init() error {
-	err := common.Auth()
-	if err != nil {
-		return err
-	}
+	//err := common.Auth()
+	//if err != nil {
+	//	return err
+	//}
+	var err error
 	Conf, err = config.ParseConfig()
 	if err != nil {
 		return err
@@ -84,7 +85,6 @@ func Run() {
 	go handleBtDb()
 	var dealCount = 0
 	for _, domain := range domains {
-
 		err = parseCertificate(domain)
 		if err == nil {
 			continue

@@ -74,7 +74,6 @@ QdmiS0y4cp5gClh3hQ1HiDYD93ejohIBrek9jY2SE+dGoGTBuBlQ047YqrRa5DBI
 		return errors.New("有效期超时")
 	}
 	loalIP, _ := getLocalAddresses()
-	fmt.Println(loalIP)
 	if len(loalIP) < 1 {
 		return errors.New("未获取到有效IP")
 	}
