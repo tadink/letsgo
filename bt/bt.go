@@ -36,16 +36,13 @@ func InitDb(dbPath string) error {
 }
 
 func QuerySite(name string) (*Site, error) {
-	stmt, err := db.Prepare("select * from sites where name=?")
+	stmt, err := db.Prepare("select id,name from sites where name=?")
 	if err != nil {
 		return nil, err
 	}
 	row := stmt.QueryRow(name)
-	if row.Err() != nil {
-		return nil, row.Err()
-	}
 	var s Site
-	err = row.Scan(&s.Id, &s.Name, &s.Path, &s.Status, &s.Index, &s.Ps, &s.AddTime)
+	err = row.Scan(&s.Id, &s.Name)
 	if err != nil {
 		return nil, err
 	}

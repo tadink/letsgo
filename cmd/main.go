@@ -44,8 +44,10 @@ func main() {
 	case "restart":
 		handleStopCmd()
 		handleStartCmd()
+	case "fix_nginx":
+		fixNginxConf()
 	case "fix_bt":
-		handleFix()
+		fixBtSite()
 	case "clean_dns":
 		cleanDnsRecord()
 	default:
@@ -140,7 +142,7 @@ func serverStart() {
 		slog.Error(err.Error())
 	}
 }
-func handleFix() {
+func fixNginxConf() {
 	fs, err := os.ReadDir("certificates")
 	if err != nil {
 		fmt.Println(err.Error())
@@ -192,6 +194,38 @@ func handleFix() {
 		}
 
 	}
+}
+func fixBtSite() {
+	conf, err := config.ParseConfig()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	err = bt.InitDb(conf.BtDbPath)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	domains, err := common.GetDomains()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	for _, domain := range domains {
+		_, err = bt.QuerySite(domain)
+
+		if err == nil {
+			continue
+		}
+		fmt.Println(err.Error())
+		s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
+		err = bt.SaveSite(s)
+		if err != nil {
+			fmt.Println("save site error:", err.Error())
+			return
+		}
+	}
+
 }
 
 func cleanDnsRecord() {
