@@ -26,8 +26,6 @@ import (
 )
 
 func main() {
-	// common.Encrypt()
-	// return
 	// if err := common.Auth(); err != nil {
 	// 	fmt.Println(err.Error())
 	// 	return
@@ -53,20 +51,6 @@ func main() {
 	default:
 		fmt.Println("unknown command")
 	}
-	/**
-	  tuiguang9bu433@163.com
-	  tuiguang9bu
-	  cdstk.com
-	  https://acme.zerossl.com/v2/DV90
-	  https://acme-v02.api.letsencrypt.org/directory
-
-
-	ahkuai8.com
-	deyuantea.com
-	njfzr.com
-	errcode:20118 msg:记录已经存在重复添加
-	*/
-
 }
 func handleStartCmd() {
 	cmd := exec.Command(os.Args[0])
@@ -153,11 +137,6 @@ func fixNginxConf() {
 		fmt.Println(err.Error())
 		return
 	}
-	err = bt.InitDb(conf.BtDbPath)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
 	certsStore := certs.NewCertificatesStorage()
 	for _, f := range fs {
 		domain := f.Name()
@@ -182,17 +161,6 @@ func fixNginxConf() {
 			fmt.Println("generateNginxConf:" + err.Error())
 			return
 		}
-		_, err = bt.QuerySite(domain)
-		if err == nil {
-			continue
-		}
-		s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
-		err = bt.SaveSite(s)
-		if err != nil {
-			fmt.Println("save site error:", err.Error())
-			return
-		}
-
 	}
 }
 func fixBtSite() {
@@ -213,7 +181,6 @@ func fixBtSite() {
 	}
 	for _, domain := range domains {
 		_, err = bt.QuerySite(domain)
-
 		if err == nil {
 			continue
 		}

@@ -116,50 +116,6 @@ func intersection(a, b []string) bool {
 	return false
 }
 
-func Encrypt() {
-	priKey := `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC+rVXFRIZLnosj
-Z69JG/AREoj+Kf4fx3Iqj7CtSjcbYudg/d8i/UlkfE0ufKkacGDXQmIyep+WKtKe
-XBBsmaj2hCrh8eZZE11sueYV44J8OEOvCx9g7CuDQNq0nf/Tibyxj7thc4oBRCHW
-vF/4QUOtHVPobvN7B3oQIZk5e4fPfCNMdTAuVZlYz0v7jXpE15S/eowqkVy4g6u0
-IPCk6weTYNn+Oq7K2PnD4VeGtUe/ZzciBz2IxWhFraJ1EvhxuFKxctog+FysiZNW
-UDZOgEZB2aJLTLhynmAKWHeFDUeINgP3d6OiEgGt6T2NjZIT50agZMG4GVDTjtiq
-tFrkMEjRAgMBAAECggEBAJe18nhyfSfNjYcuCBlzUR9EUBtp7ff7CKs0iK5YTmBL
-4S0a0V9Vh/+bpw1FwoZ2w5aCCv9+8VrZ15qIRckiuXzqy/PaNBzLe5n2j0r7KecM
-HU44206SmkxkXZ8310TIYookgkKXW0aGnyXr26/6vY4Pt6NIJBHPcR9EnFVQJE7A
-ZN9qrrnTmxBkVgeh5MuFCHzwLTc+tyZIz3GlSqExMQ0/VyfRStQjGDojBakQVf6f
-eO8VybzhVMtcc9jHAay4kzvJrmojOXcxEckSacK3sQdSv7CpNnSvA18vDHGr8AeU
-9BdXwDqQGKQWthMr30W0h50zP5gcL9TecZ6E/ae938ECgYEA9qS1PO7SfxGk2tnr
-QMnWq69z6tw5IH0isAsjfhsxH/3f1CpYookKPEQ2fco/WnA2Q9iyzO9rDu1diBHg
-Il3YAYYawlxnOyM075fPSfmwj4avIoW1kwrqDD2yxIejRQ4DlisoB/aK3hJHODTM
-Zac2JC827+oMYMY++SyZTy/D3SMCgYEAxekbZLuw39Der8HC/4Wjagjp6KxP/ses
-IP/YT4z3op+OgxUeNJshjTP3hJr32ytEKI00bQ0Vc3C8giDtHAyFRp85F+f8Vh1t
-avrjphS0wI4PDNV+Ibk21zmqRtIXSVBN8XgLn6ow36PiTgl8geGO5i84hLCdRtiw
-2j6aebF143sCgYEA862FNj9KDqry8hotOGRxyEvfPaH4euXHGKDYnyXkYhQkSOzR
-hzvXtfU61Qq1jvegVWXKOXktj6DqMJ5gj/Ohjtfcpjw+7Yl6KmEVNqQPUa4iZ/ws
-iatV02Q9s7fCkl4nIv1eXoexaXgrjxdy/de3QQa4w028jvwuiWYLzdWGMHsCgYAT
-SaOMzqnvNhjtwhFx+6EwbUv2jAyDxQvmb2iyYAemRqyJ4938vH2pmD3wI3YyWuYa
-maBZXGQRyxPkDrds+19lwZC73rT944JNYcQb5Hq1JWMcGhZfzQAmO413t3PjhjsC
-ZHOljN2UfhFJD62drtDRaBq2+8toIyghLOa7I2tczwKBgFfjVo5oP8La2nG0WLAa
-zUBlIi1g/Lo1eKJ81qS6pPOxT0/DHrYgZXJ7w3SCr1z6OD5q5CD96WIj916T1wEI
-N36ruuotrTuuJNRxP2VW+XH8A9JdOPf0jmcrZlFcak528lwiIRWnfUjPLc7bjnry
-12/MtOmpSYJdbXTwyiElVwqE
------END PRIVATE KEY-----`
-
-	authInfo := AuthInfo{IPList: []string{"123.42.23.14"}, Date: "2025-07-22"}
-	data, _ := json.Marshal(&authInfo)
-	result, err := gorsa.PriKeyEncrypt(string(data), priKey)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	err = os.WriteFile("auth", []byte(result), os.ModePerm)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-}
-
 func GetDomains() ([]string, error) {
 	d, err := os.ReadFile("domains")
 	if err != nil {
