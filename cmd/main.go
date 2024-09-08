@@ -137,6 +137,11 @@ func fixNginxConf() {
 		fmt.Println(err.Error())
 		return
 	}
+	domains, err := common.GetDomains()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	certsStore := certs.NewCertificatesStorage()
 	for _, f := range fs {
 		domain := f.Name()
@@ -156,7 +161,19 @@ func fixNginxConf() {
 			return
 
 		}
-		err = common.GenerateNginxConf(conf.NginxConfTpl, conf.BtVhostDir, domain, crtFile, keyFile)
+		var nginxConfTpl string
+		for _, item := range domains {
+			for _, d := range item.Domains {
+				if d == domain {
+					nginxConfTpl = item.NginxTpl
+				}
+			}
+		}
+		if nginxConfTpl == "" {
+			fmt.Println("nginx tpl 不存在:", domain)
+			return
+		}
+		err = common.GenerateNginxConf(nginxConfTpl, conf.BtVhostDir, domain, crtFile, keyFile)
 		if err != nil {
 			fmt.Println("generateNginxConf:" + err.Error())
 			return
@@ -179,18 +196,22 @@ func fixBtSite() {
 		fmt.Println(err.Error())
 		return
 	}
-	for _, domain := range domains {
-		_, err = bt.QuerySite(domain)
-		if err == nil {
-			continue
+
+	for _, item := range domains {
+		for _, domain := range item.Domains {
+			_, err = bt.QuerySite(domain)
+			if err == nil {
+				continue
+			}
+			fmt.Println(err.Error())
+			s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
+			err = bt.SaveSite(s)
+			if err != nil {
+				fmt.Println("save site error:", err.Error())
+				return
+			}
 		}
-		fmt.Println(err.Error())
-		s := &bt.Site{Name: domain, Path: "/www/wwwroot/", Status: "1", Ps: domain, AddTime: time.Now().Format("2006-01-02 15:04:05")}
-		err = bt.SaveSite(s)
-		if err != nil {
-			fmt.Println("save site error:", err.Error())
-			return
-		}
+
 	}
 
 }
@@ -207,24 +228,27 @@ func cleanDnsRecord() {
 		return
 	}
 	p := providers.NewWestDNSProvider(conf.WestUsername, conf.WestPassword)
-	for _, domain := range domains {
-		records, err := p.GetRecords(domain)
-		if err != nil {
-			fmt.Println(domain, err.Error())
-			continue
-		}
-		for _, record := range records {
-			if record.DNSType == "TXT" && record.Item == "_acme-challenge" {
-				id := fmt.Sprintf("%d", record.Id)
-				form := &url.Values{}
-				form.Add("domain", domain)
-				form.Add("id", id)
-				_, err = p.DeleteRecord(form)
-				if err != nil {
-					fmt.Println(domain, err.Error())
-				}
+	for _, item := range domains {
+		for _, domain := range item.Domains {
+			records, err := p.GetRecords(domain)
+			if err != nil {
+				fmt.Println(domain, err.Error())
+				continue
 			}
+			for _, record := range records {
+				if record.DNSType == "TXT" && record.Item == "_acme-challenge" {
+					id := fmt.Sprintf("%d", record.Id)
+					form := &url.Values{}
+					form.Add("domain", domain)
+					form.Add("id", id)
+					_, err = p.DeleteRecord(form)
+					if err != nil {
+						fmt.Println(domain, err.Error())
+					}
+				}
 
+			}
 		}
+
 	}
 }

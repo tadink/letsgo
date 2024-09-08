@@ -84,19 +84,22 @@ func Run() {
 	}
 	go handleBtDb()
 	var dealCount = 0
-	for _, domain := range domains {
-		err = parseCertificate(domain)
-		if err == nil {
-			continue
+	for _, item := range domains {
+		for _, domain := range item.Domains {
+			err = parseCertificate(domain)
+			if err == nil {
+				continue
+			}
+			dealCount++
+			if dealCount > 300 {
+				break
+			}
+			time.Sleep(5 * time.Second)
+			wg.Add(1)
+			parallelChan <- struct{}{}
+			go applyRequest(domain, item.NginxTpl)
 		}
-		dealCount++
-		if dealCount > 300 {
-			break
-		}
-		time.Sleep(5 * time.Second)
-		wg.Add(1)
-		parallelChan <- struct{}{}
-		go applyRequest(domain)
+
 	}
 	wg.Wait()
 	close(parallelChan)
@@ -138,7 +141,7 @@ func handleBtDb() {
 	close(finishChan)
 }
 
-func applyRequest(domain string) {
+func applyRequest(domain string, nginxConfTpl string) {
 	defer func() {
 		wg.Done()
 		<-parallelChan
@@ -179,7 +182,7 @@ func applyRequest(domain string) {
 		return
 
 	}
-	err = common.GenerateNginxConf(Conf.NginxConfTpl, Conf.BtVhostDir, domain, crtFile, keyFile)
+	err = common.GenerateNginxConf(nginxConfTpl, Conf.BtVhostDir, domain, crtFile, keyFile)
 	if err != nil {
 		slog.Error("generateNginxConf:" + err.Error())
 		return

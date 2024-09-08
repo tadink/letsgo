@@ -116,13 +116,36 @@ func intersection(a, b []string) bool {
 	return false
 }
 
-func GetDomains() ([]string, error) {
-	d, err := os.ReadFile("domains")
+type DomainInfo struct {
+	Domains  []string
+	NginxTpl string
+}
+
+func GetDomains() ([]DomainInfo, error) {
+	var result []DomainInfo
+	dirs, err := os.ReadDir("domain_dir")
 	if err != nil {
 		return nil, err
 	}
-	domainStr := strings.ReplaceAll(string(d), "\r", "")
-	domains := strings.Split(domainStr, "\n")
-	return domains, nil
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join("domain_dir", dir.Name(), "domains"))
+		if err != nil {
+			return nil, err
+		}
+		item := DomainInfo{Domains: strings.Split(strings.ReplaceAll(string(b), "\r", ""), "\n")}
+
+		b, err = os.ReadFile(filepath.Join("domain_dir", dir.Name(), "nginx_conf.tpl"))
+		if err != nil {
+			return nil, err
+		}
+		item.NginxTpl = string(b)
+		result = append(result, item)
+
+	}
+
+	return result, nil
 
 }

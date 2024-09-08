@@ -13,7 +13,6 @@ type Config struct {
 	BtDbPath        string `json:"bt_db_path"`
 	BtVhostDir      string `json:"bt_vhost_dir"`
 	NginxRestartCmd string `json:"nginx_restart_cmd"`
-	NginxConfTpl    string
 }
 
 type CAInfo struct {
@@ -34,10 +33,5 @@ func ParseConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	nd, err := os.ReadFile("nginx_conf.tpl")
-	if err != nil {
-		return nil, err
-	}
-	config.NginxConfTpl = string(nd)
 	return &config, nil
 }
